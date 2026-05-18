@@ -262,8 +262,7 @@ async fn main() -> OpenActionResult<()> {
 					fmt_opt(s.usage_pct, |v| format!("{:.0}%", v)),
 					fmt_opt(s.temp_c, |v| format!("{:.0}°C", v)),
 					match s.mem_used_mib {
-						Some(u) if u < 1024.0 => format!("{:.0}MB", u),
-						Some(u) => format!("{:.1}GB", u / 1024.0),
+						Some(u) => format!("{:.2}GB", u / 1024.0),
 						None => "N/A".to_string(),
 					},
 					fmt_opt(s.power_w, |v| format!("{:.0}W", v)),
