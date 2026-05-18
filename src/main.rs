@@ -1,41 +1,86 @@
-use std::collections::HashMap;
-
+use base64::Engine;
 use openaction::*;
+use serde::{Deserialize, Serialize};
 use tokio::process::Command;
 
-struct UsageAction;
-#[async_trait]
-impl Action for UsageAction {
-	const UUID: ActionUuid = "dev.maugap.oagpustats.usage";
-	type Settings = HashMap<String, String>;
+#[derive(Serialize, Deserialize, Clone)]
+#[serde(default)]
+struct BgSettings {
+	color1: String,
+	color2: String,
+	gradient: bool,
 }
 
-struct TemperatureAction;
-#[async_trait]
-impl Action for TemperatureAction {
-	const UUID: ActionUuid = "dev.maugap.oagpustats.temperature";
-	type Settings = HashMap<String, String>;
+impl Default for BgSettings {
+	fn default() -> Self {
+		Self {
+			color1: "#1e1e1e".to_string(),
+			color2: "#444444".to_string(),
+			gradient: false,
+		}
+	}
 }
 
-struct MemoryAction;
-#[async_trait]
-impl Action for MemoryAction {
-	const UUID: ActionUuid = "dev.maugap.oagpustats.memory";
-	type Settings = HashMap<String, String>;
+fn render_bg_data_url(s: &BgSettings) -> String {
+	let svg = if s.gradient {
+		format!(
+			r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{}"/><stop offset="100%" stop-color="{}"/></linearGradient></defs><rect width="144" height="144" fill="url(#g)"/></svg>"##,
+			s.color1, s.color2
+		)
+	} else {
+		format!(
+			r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" fill="{}"/></svg>"##,
+			s.color1
+		)
+	};
+	format!(
+		"data:image/svg+xml;base64,{}",
+		base64::engine::general_purpose::STANDARD.encode(svg)
+	)
 }
 
-struct PowerAction;
-#[async_trait]
-impl Action for PowerAction {
-	const UUID: ActionUuid = "dev.maugap.oagpustats.power";
-	type Settings = HashMap<String, String>;
+async fn paint_bg(instance: &Instance, settings: &BgSettings) -> OpenActionResult<()> {
+	instance
+		.set_image(Some(render_bg_data_url(settings)), None)
+		.await
 }
+
+macro_rules! gpu_action {
+	($name:ident, $uuid:expr) => {
+		struct $name;
+		#[async_trait]
+		impl Action for $name {
+			const UUID: ActionUuid = $uuid;
+			type Settings = BgSettings;
+
+			async fn will_appear(
+				&self,
+				instance: &Instance,
+				settings: &Self::Settings,
+			) -> OpenActionResult<()> {
+				paint_bg(instance, settings).await
+			}
+
+			async fn did_receive_settings(
+				&self,
+				instance: &Instance,
+				settings: &Self::Settings,
+			) -> OpenActionResult<()> {
+				paint_bg(instance, settings).await
+			}
+		}
+	};
+}
+
+gpu_action!(UsageAction, "dev.maugap.oagpustats.usage");
+gpu_action!(TemperatureAction, "dev.maugap.oagpustats.temperature");
+gpu_action!(MemoryAction, "dev.maugap.oagpustats.memory");
+gpu_action!(PowerAction, "dev.maugap.oagpustats.power");
 
 struct GpuSnapshot {
 	usage_pct: Option<f32>,
 	temp_c: Option<f32>,
 	mem_used_mib: Option<f32>,
-	mem_total_mib: Option<f32>,
 	power_w: Option<f32>,
 }
 
@@ -65,13 +110,13 @@ async fn read_gpu() -> Option<GpuSnapshot> {
 		}
 	};
 
-	Some(GpuSnapshot {
-		usage_pct: fields.next().and_then(parse),
-		temp_c: fields.next().and_then(parse),
-		mem_used_mib: fields.next().and_then(parse),
-		mem_total_mib: fields.next().and_then(parse),
-		power_w: fields.next().and_then(parse),
-	})
+	let usage_pct = fields.next().and_then(parse);
+	let temp_c = fields.next().and_then(parse);
+	let mem_used_mib = fields.next().and_then(parse);
+	let _mem_total_mib = fields.next().and_then(parse);
+	let power_w = fields.next().and_then(parse);
+
+	Some(GpuSnapshot { usage_pct, temp_c, mem_used_mib, power_w })
 }
 
 fn fmt_opt<F: FnOnce(f32) -> String>(v: Option<f32>, f: F) -> String {
@@ -103,10 +148,10 @@ async fn main() -> OpenActionResult<()> {
 				Some(s) => (
 					fmt_opt(s.usage_pct, |v| format!("{:.0}%", v)),
 					fmt_opt(s.temp_c, |v| format!("{:.0}°C", v)),
-					match (s.mem_used_mib, s.mem_total_mib) {
-						(Some(u), Some(t)) => format!("{:.1}/{:.0}\nGB", u / 1024.0, t / 1024.0),
-						(Some(u), None) => format!("{:.1}GB", u / 1024.0),
-						_ => "N/A".to_string(),
+					match s.mem_used_mib {
+						Some(u) if u < 1024.0 => format!("{:.0}MB", u),
+						Some(u) => format!("{:.1}GB", u / 1024.0),
+						None => "N/A".to_string(),
 					},
 					fmt_opt(s.power_w, |v| format!("{:.0}W", v)),
 				),

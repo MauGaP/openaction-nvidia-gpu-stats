@@ -1,0 +1,109 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+		<meta charset="utf-8" />
+		<script>
+			let update = () => {};
+
+			function connectOpenActionSocket(inPort, inPropertyInspectorUUID, inRegisterEvent, inInfo, inActionInfo) {
+				const websocket = new WebSocket("ws://localhost:" + inPort);
+				inActionInfo = JSON.parse(inActionInfo);
+
+				const settings = inActionInfo.payload.settings ?? {};
+				const color1El = document.getElementById("color1");
+				const color2El = document.getElementById("color2");
+				const gradientEl = document.getElementById("gradient");
+				const color2Row = document.getElementById("color2-row");
+
+				color1El.value = settings.color1 ?? "#1e1e1e";
+				color2El.value = settings.color2 ?? "#444444";
+				gradientEl.checked = settings.gradient ?? false;
+				color2Row.style.display = gradientEl.checked ? "" : "none";
+
+				websocket.onopen = () => {
+					websocket.send(JSON.stringify({
+						event: inRegisterEvent,
+						uuid: inPropertyInspectorUUID,
+					}));
+				};
+
+				websocket.onmessage = (event) => {
+					const data = JSON.parse(event.data);
+					if (data.event == "didReceiveSettings") {
+						const s = data.payload.settings ?? {};
+						if (s.color1 !== undefined) color1El.value = s.color1;
+						if (s.color2 !== undefined) color2El.value = s.color2;
+						if (s.gradient !== undefined) gradientEl.checked = s.gradient;
+						color2Row.style.display = gradientEl.checked ? "" : "none";
+					}
+				};
+
+				update = () => {
+					color2Row.style.display = gradientEl.checked ? "" : "none";
+					websocket.send(JSON.stringify({
+						event: "setSettings",
+						context: inActionInfo.context,
+						payload: {
+							color1: color1El.value,
+							color2: color2El.value,
+							gradient: gradientEl.checked,
+						},
+					}));
+				};
+			}
+
+			const connectElgatoStreamDeckSocket = connectOpenActionSocket;
+		</script>
+
+		<style>
+			* {
+				font-family: system-ui, sans-serif;
+				font-size: 14px;
+				color: oklch(92.2% 0 0);
+				box-sizing: border-box;
+			}
+			body {
+				margin: 16px;
+				background-color: oklch(26.9% 0 0);
+			}
+			.row {
+				display: flex;
+				align-items: center;
+				gap: 12px;
+				margin-bottom: 12px;
+			}
+			label {
+				min-width: 90px;
+			}
+			input[type="color"] {
+				width: 44px;
+				height: 28px;
+				padding: 0;
+				border: 1px solid oklch(43.9% 0 0);
+				border-radius: 6px;
+				background: transparent;
+				cursor: pointer;
+			}
+			input[type="checkbox"] {
+				width: 16px;
+				height: 16px;
+				cursor: pointer;
+			}
+		</style>
+	</head>
+
+	<body>
+		<div class="row">
+			<label for="color1">Color</label>
+			<input id="color1" type="color" oninput="update();" />
+		</div>
+		<div class="row">
+			<label for="gradient">Gradient</label>
+			<input id="gradient" type="checkbox" onchange="update();" />
+		</div>
+		<div class="row" id="color2-row">
+			<label for="color2">Color 2</label>
+			<input id="color2" type="color" oninput="update();" />
+		</div>
+	</body>
+</html>
