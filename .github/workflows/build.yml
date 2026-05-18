@@ -1,9 +1,12 @@
-name: Build
+name: Build and release
 
 on:
   workflow_dispatch:
   push:
     tags: ["v*"]
+
+permissions:
+  contents: write
 
 jobs:
   build:
@@ -14,10 +17,8 @@ jobs:
         include:
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-22.04
-            artifact-ext: -x86_64-unknown-linux-gnu
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-22.04-arm
-            artifact-ext: -aarch64-unknown-linux-gnu
 
     steps:
       - name: Checkout
@@ -36,18 +37,54 @@ jobs:
       - name: Build binary
         run: cargo build --release --target ${{ matrix.target }}
 
-      - name: Rename binary
-        id: rename
+      - name: Stage binary artifact
         shell: bash
         run: |
-          PACKAGE_NAME=$(cargo metadata --no-deps --format-version 1 | jq -r ".packages[0].name")
-          ARTIFACT_NAME="${PACKAGE_NAME}${{ matrix.artifact-ext }}"
-          mv "target/${{ matrix.target }}/release/${PACKAGE_NAME}" "$ARTIFACT_NAME"
-          echo "artifact_name=$ARTIFACT_NAME" >> $GITHUB_OUTPUT
+          mkdir -p staged
+          cp "target/${{ matrix.target }}/release/oagpustats" "staged/oagpustats-${{ matrix.target }}"
+          chmod +x "staged/oagpustats-${{ matrix.target }}"
 
-      - name: Upload artifact
+      - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
-          name: ${{ steps.rename.outputs.artifact_name }}
-          path: ${{ steps.rename.outputs.artifact_name }}
+          name: bin-${{ matrix.target }}
+          path: staged/oagpustats-${{ matrix.target }}
           compression-level: 0
+
+  package:
+    name: Package plugin and publish release
+    needs: build
+    if: startsWith(github.ref, 'refs/tags/v')
+    runs-on: ubuntu-22.04
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Download all binary artifacts
+        uses: actions/download-artifact@v4
+        with:
+          path: bins
+
+      - name: Assemble plugin directory
+        run: |
+          set -euo pipefail
+          PLUGIN_DIR="dev.maugap.oagpustats.sdPlugin"
+          mkdir -p "$PLUGIN_DIR"
+          cp assets/manifest.json "$PLUGIN_DIR/"
+          cp assets/icon.png "$PLUGIN_DIR/"
+          cp assets/pi.html "$PLUGIN_DIR/"
+          for arch in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
+            install -m 755 "bins/bin-$arch/oagpustats-$arch" "$PLUGIN_DIR/oagpustats-$arch"
+          done
+          zip -r dev.maugap.oagpustats.zip "$PLUGIN_DIR"
+          ls -la dev.maugap.oagpustats.zip
+          unzip -l dev.maugap.oagpustats.zip
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dev.maugap.oagpustats.zip
+          generate_release_notes: true
+          draft: false
+          prerelease: false
