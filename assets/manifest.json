@@ -1,7 +1,7 @@
 {
 	"Name": "GPU Stats",
 	"Author": "maugap",
-	"Version": "0.1.0",
+	"Version": "0.1.1",
 	"Category": "GPU Stats",
 	"Icon": "icon",
 	"OS": [{ "Platform": "linux" }],
