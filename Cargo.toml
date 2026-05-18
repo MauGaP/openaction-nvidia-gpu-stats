@@ -1,0 +1,9 @@
+[package]
+name = "oagpustats"
+edition = "2024"
+
+[dependencies]
+openaction = "2.1"
+tokio = { version = "1.47", features = ["rt-multi-thread", "macros", "time", "process"] }
+log = "0.4"
+simplelog = "0.12"

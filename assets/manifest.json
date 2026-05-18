@@ -1,0 +1,47 @@
+{
+	"Name": "GPU Stats",
+	"Author": "maugap",
+	"Version": "0.1.0",
+	"Category": "GPU Stats",
+	"Icon": "icon",
+	"OS": [{ "Platform": "linux" }],
+	"CodePaths": {
+		"x86_64-unknown-linux-gnu": "oagpustats-x86_64-unknown-linux-gnu",
+		"aarch64-unknown-linux-gnu": "oagpustats-aarch64-unknown-linux-gnu"
+	},
+	"CodePathLin": "oagpustats-x86_64-unknown-linux-gnu",
+	"Actions": [
+		{
+			"UUID": "dev.maugap.oagpustats.usage",
+			"Name": "GPU Usage",
+			"Icon": "icon",
+			"Tooltip": "Displays GPU utilisation (NVIDIA via nvidia-smi)",
+			"Controllers": ["Keypad", "Encoder"],
+			"States": [{ "Title": "0%", "FontSize": 16 }]
+		},
+		{
+			"UUID": "dev.maugap.oagpustats.temperature",
+			"Name": "GPU Temperature",
+			"Icon": "icon",
+			"Tooltip": "Displays GPU temperature (NVIDIA via nvidia-smi)",
+			"Controllers": ["Keypad", "Encoder"],
+			"States": [{ "Title": "--°C", "FontSize": 18 }]
+		},
+		{
+			"UUID": "dev.maugap.oagpustats.memory",
+			"Name": "GPU Memory",
+			"Icon": "icon",
+			"Tooltip": "Displays GPU memory used / total (NVIDIA via nvidia-smi)",
+			"Controllers": ["Keypad", "Encoder"],
+			"States": [{ "Title": "0GB", "FontSize": 12 }]
+		},
+		{
+			"UUID": "dev.maugap.oagpustats.power",
+			"Name": "GPU Power",
+			"Icon": "icon",
+			"Tooltip": "Displays GPU power draw in watts (NVIDIA via nvidia-smi)",
+			"Controllers": ["Keypad", "Encoder"],
+			"States": [{ "Title": "0W", "FontSize": 16 }]
+		}
+	]
+}
