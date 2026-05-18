@@ -1,3 +1,6 @@
+use std::collections::HashMap;
+use std::sync::{Mutex, OnceLock};
+
 use base64::Engine;
 use openaction::*;
 use serde::{Deserialize, Serialize};
@@ -9,6 +12,8 @@ struct BgSettings {
 	color1: String,
 	color2: String,
 	gradient: bool,
+	bar: String,
+	bar_color: String,
 }
 
 impl Default for BgSettings {
@@ -17,31 +22,84 @@ impl Default for BgSettings {
 			color1: "#1e1e1e".to_string(),
 			color2: "#444444".to_string(),
 			gradient: false,
+			bar: "none".to_string(),
+			bar_color: "#22c55e".to_string(),
 		}
 	}
 }
 
-fn render_bg_data_url(s: &BgSettings) -> String {
-	let svg = if s.gradient {
-		format!(
-			r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><defs><radialGradient id="g" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="{}"/><stop offset="100%" stop-color="{}"/></radialGradient></defs><rect width="144" height="144" fill="url(#g)"/></svg>"##,
-			s.color1, s.color2
+fn cache() -> &'static Mutex<HashMap<String, BgSettings>> {
+	static C: OnceLock<Mutex<HashMap<String, BgSettings>>> = OnceLock::new();
+	C.get_or_init(|| Mutex::new(HashMap::new()))
+}
+
+fn get_settings(id: &str) -> BgSettings {
+	cache().lock().unwrap().get(id).cloned().unwrap_or_default()
+}
+
+fn store_settings(id: &str, s: BgSettings) {
+	cache().lock().unwrap().insert(id.to_string(), s);
+}
+
+fn render_overlay(pct: f32, style: &str, bar_color: &str) -> String {
+	let pct = pct.clamp(0.0, 1.0);
+	match style {
+		"bar_bottom" => {
+			let filled = 144.0 * pct;
+			format!(
+				r##"<rect x="0" y="130" width="144" height="14" fill="rgba(0,0,0,0.35)"/><rect x="0" y="130" width="{:.1}" height="14" fill="{}"/>"##,
+				filled, bar_color
+			)
+		}
+		"arc" => {
+			let r: f32 = 60.0;
+			let circ = 2.0 * std::f32::consts::PI * r;
+			let dash_filled = circ * pct;
+			let dash_gap = circ - dash_filled;
+			format!(
+				r##"<g transform="rotate(-90 72 72)"><circle cx="72" cy="72" r="60" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="12"/><circle cx="72" cy="72" r="60" fill="none" stroke="{}" stroke-width="12" stroke-dasharray="{:.2} {:.2}" stroke-linecap="round"/></g>"##,
+				bar_color, dash_filled, dash_gap
+			)
+		}
+		_ => String::new(),
+	}
+}
+
+fn render_image_data_url(s: &BgSettings, pct: Option<f32>) -> String {
+	let (defs, bg_fill) = if s.gradient {
+		(
+			format!(
+				r##"<defs><radialGradient id="g" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="{}"/><stop offset="100%" stop-color="{}"/></radialGradient></defs>"##,
+				s.color1, s.color2
+			),
+			"url(#g)".to_string(),
 		)
 	} else {
-		format!(
-			r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><rect width="144" height="144" fill="{}"/></svg>"##,
-			s.color1
-		)
+		(String::new(), s.color1.clone())
 	};
+
+	let overlay = pct
+		.map(|p| render_overlay(p, &s.bar, &s.bar_color))
+		.unwrap_or_default();
+
+	let svg = format!(
+		r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144">{}<rect width="144" height="144" fill="{}"/>{}</svg>"##,
+		defs, bg_fill, overlay
+	);
+
 	format!(
 		"data:image/svg+xml;base64,{}",
 		base64::engine::general_purpose::STANDARD.encode(svg)
 	)
 }
 
-async fn paint_bg(instance: &Instance, settings: &BgSettings) -> OpenActionResult<()> {
+async fn paint(
+	instance: &Instance,
+	settings: &BgSettings,
+	pct: Option<f32>,
+) -> OpenActionResult<()> {
 	instance
-		.set_image(Some(render_bg_data_url(settings)), None)
+		.set_image(Some(render_image_data_url(settings, pct)), None)
 		.await
 }
 
@@ -58,7 +116,8 @@ macro_rules! gpu_action {
 				instance: &Instance,
 				settings: &Self::Settings,
 			) -> OpenActionResult<()> {
-				paint_bg(instance, settings).await
+				store_settings(&instance.instance_id, settings.clone());
+				paint(instance, settings, None).await
 			}
 
 			async fn did_receive_settings(
@@ -66,7 +125,17 @@ macro_rules! gpu_action {
 				instance: &Instance,
 				settings: &Self::Settings,
 			) -> OpenActionResult<()> {
-				paint_bg(instance, settings).await
+				store_settings(&instance.instance_id, settings.clone());
+				paint(instance, settings, None).await
+			}
+
+			async fn will_disappear(
+				&self,
+				instance: &Instance,
+				_settings: &Self::Settings,
+			) -> OpenActionResult<()> {
+				cache().lock().unwrap().remove(&instance.instance_id);
+				Ok(())
 			}
 		}
 	};
@@ -81,6 +150,7 @@ struct GpuSnapshot {
 	usage_pct: Option<f32>,
 	temp_c: Option<f32>,
 	mem_used_mib: Option<f32>,
+	mem_total_mib: Option<f32>,
 	power_w: Option<f32>,
 }
 
@@ -113,10 +183,16 @@ async fn read_gpu() -> Option<GpuSnapshot> {
 	let usage_pct = fields.next().and_then(parse);
 	let temp_c = fields.next().and_then(parse);
 	let mem_used_mib = fields.next().and_then(parse);
-	let _mem_total_mib = fields.next().and_then(parse);
+	let mem_total_mib = fields.next().and_then(parse);
 	let power_w = fields.next().and_then(parse);
 
-	Some(GpuSnapshot { usage_pct, temp_c, mem_used_mib, power_w })
+	Some(GpuSnapshot {
+		usage_pct,
+		temp_c,
+		mem_used_mib,
+		mem_total_mib,
+		power_w,
+	})
 }
 
 fn fmt_opt<F: FnOnce(f32) -> String>(v: Option<f32>, f: F) -> String {
@@ -144,7 +220,7 @@ async fn main() -> OpenActionResult<()> {
 		loop {
 			let snap = read_gpu().await;
 
-			let (usage, temp, mem, power) = match snap {
+			let (usage_title, temp_title, mem_title, power_title) = match &snap {
 				Some(s) => (
 					fmt_opt(s.usage_pct, |v| format!("{:.0}%", v)),
 					fmt_opt(s.temp_c, |v| format!("{:.0}°C", v)),
@@ -163,17 +239,40 @@ async fn main() -> OpenActionResult<()> {
 				),
 			};
 
+			let usage_pct = snap.as_ref().and_then(|s| s.usage_pct).map(|v| v / 100.0);
+			let mem_pct = snap
+				.as_ref()
+				.and_then(|s| match (s.mem_used_mib, s.mem_total_mib) {
+					(Some(u), Some(t)) if t > 0.0 => Some(u / t),
+					_ => None,
+				});
+
 			for instance in visible_instances(UsageAction::UUID).await {
-				let _ = instance.set_title(Some(usage.clone()), None).await;
+				let s = get_settings(&instance.instance_id);
+				if s.bar != "none" {
+					let _ = instance
+						.set_image(Some(render_image_data_url(&s, usage_pct)), None)
+						.await;
+				}
+				let _ = instance.set_title(Some(usage_title.clone()), None).await;
 			}
-			for instance in visible_instances(TemperatureAction::UUID).await {
-				let _ = instance.set_title(Some(temp.clone()), None).await;
-			}
+
 			for instance in visible_instances(MemoryAction::UUID).await {
-				let _ = instance.set_title(Some(mem.clone()), None).await;
+				let s = get_settings(&instance.instance_id);
+				if s.bar != "none" {
+					let _ = instance
+						.set_image(Some(render_image_data_url(&s, mem_pct)), None)
+						.await;
+				}
+				let _ = instance.set_title(Some(mem_title.clone()), None).await;
 			}
+
+			for instance in visible_instances(TemperatureAction::UUID).await {
+				let _ = instance.set_title(Some(temp_title.clone()), None).await;
+			}
+
 			for instance in visible_instances(PowerAction::UUID).await {
-				let _ = instance.set_title(Some(power.clone()), None).await;
+				let _ = instance.set_title(Some(power_title.clone()), None).await;
 			}
 
 			tokio::time::sleep(std::time::Duration::from_secs(2)).await;
