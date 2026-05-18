@@ -24,7 +24,7 @@ impl Default for BgSettings {
 fn render_bg_data_url(s: &BgSettings) -> String {
 	let svg = if s.gradient {
 		format!(
-			r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><defs><linearGradient id="g" x1="0%" y1="0%" x2="100%" y2="100%"><stop offset="0%" stop-color="{}"/><stop offset="100%" stop-color="{}"/></linearGradient></defs><rect width="144" height="144" fill="url(#g)"/></svg>"##,
+			r##"<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 144 144"><defs><radialGradient id="g" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="{}"/><stop offset="100%" stop-color="{}"/></radialGradient></defs><rect width="144" height="144" fill="url(#g)"/></svg>"##,
 			s.color1, s.color2
 		)
 	} else {
