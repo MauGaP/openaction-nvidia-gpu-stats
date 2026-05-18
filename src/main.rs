@@ -13,6 +13,7 @@ struct BgSettings {
 	color2: String,
 	gradient: bool,
 	balance: u8,
+	softness: u8,
 	bar: String,
 	bar_color: String,
 }
@@ -24,6 +25,7 @@ impl Default for BgSettings {
 			color2: "#444444".to_string(),
 			gradient: false,
 			balance: 50,
+			softness: 50,
 			bar: "none".to_string(),
 			bar_color: "#22c55e".to_string(),
 		}
@@ -43,6 +45,21 @@ fn store_settings(id: &str, s: BgSettings) {
 	cache().lock().unwrap().insert(id.to_string(), s);
 }
 
+fn polar(cx: f32, cy: f32, r: f32, compass_deg: f32) -> (f32, f32) {
+	let rad = compass_deg.to_radians();
+	(cx + r * rad.sin(), cy - r * rad.cos())
+}
+
+fn arc_path(cx: f32, cy: f32, r: f32, start_deg: f32, sweep_deg: f32) -> String {
+	let (sx, sy) = polar(cx, cy, r, start_deg);
+	let (ex, ey) = polar(cx, cy, r, start_deg + sweep_deg);
+	let large = if sweep_deg > 180.0 { 1 } else { 0 };
+	format!(
+		"M {:.2} {:.2} A {:.2} {:.2} 0 {} 1 {:.2} {:.2}",
+		sx, sy, r, r, large, ex, ey
+	)
+}
+
 fn render_overlay(pct: f32, style: &str, bar_color: &str) -> String {
 	let pct = pct.clamp(0.0, 1.0);
 	match style {
@@ -54,14 +71,22 @@ fn render_overlay(pct: f32, style: &str, bar_color: &str) -> String {
 			)
 		}
 		"arc" => {
-			let r: f32 = 60.0;
-			let circ = 2.0 * std::f32::consts::PI * r;
-			let dash_filled = circ * pct;
-			let dash_gap = circ - dash_filled;
-			format!(
-				r##"<g transform="rotate(-90 72 72)"><circle cx="72" cy="72" r="60" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="12"/><circle cx="72" cy="72" r="60" fill="none" stroke="{}" stroke-width="12" stroke-dasharray="{:.2} {:.2}" stroke-linecap="round"/></g>"##,
-				bar_color, dash_filled, dash_gap
-			)
+			const START: f32 = 210.0;
+			const SWEEP: f32 = 300.0;
+			let bg = arc_path(72.0, 72.0, 60.0, START, SWEEP);
+			let bg_layer = format!(
+				r##"<path d="{}" fill="none" stroke="rgba(0,0,0,0.35)" stroke-width="12" stroke-linecap="round"/>"##,
+				bg
+			);
+			if pct > 0.0 {
+				let fg = arc_path(72.0, 72.0, 60.0, START, SWEEP * pct);
+				format!(
+					r##"{}<path d="{}" fill="none" stroke="{}" stroke-width="12" stroke-linecap="round"/>"##,
+					bg_layer, fg, bar_color
+				)
+			} else {
+				bg_layer
+			}
 		}
 		_ => String::new(),
 	}
@@ -70,8 +95,10 @@ fn render_overlay(pct: f32, style: &str, bar_color: &str) -> String {
 fn render_image_data_url(s: &BgSettings, pct: Option<f32>) -> String {
 	let (defs, bg_fill) = if s.gradient {
 		let b = (s.balance.min(100) as f32) / 100.0;
-		let stop1 = b * 50.0;
-		let stop2 = b * 50.0 + 50.0;
+		let midpoint = b * 50.0 + 25.0;
+		let half_width = (s.softness.min(100) as f32) / 100.0 * 50.0;
+		let stop1 = (midpoint - half_width).max(0.0);
+		let stop2 = (midpoint + half_width).min(100.0);
 		(
 			format!(
 				r##"<defs><radialGradient id="g" cx="50%" cy="50%" r="70%"><stop offset="{:.1}%" stop-color="{}"/><stop offset="{:.1}%" stop-color="{}"/></radialGradient></defs>"##,

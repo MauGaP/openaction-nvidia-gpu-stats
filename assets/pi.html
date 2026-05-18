@@ -22,6 +22,8 @@
 				const color2Row = document.getElementById("color2-row");
 				const balanceEl = document.getElementById("balance");
 				const balanceRow = document.getElementById("balance-row");
+				const softnessEl = document.getElementById("softness");
+				const softnessRow = document.getElementById("softness-row");
 				const barEl = document.getElementById("bar");
 				const barColorEl = document.getElementById("bar-color");
 				const barRow = document.getElementById("bar-row");
@@ -31,12 +33,14 @@
 				color2El.value = settings.color2 ?? "#444444";
 				gradientEl.checked = settings.gradient ?? false;
 				balanceEl.value = settings.balance ?? 50;
+				softnessEl.value = settings.softness ?? 50;
 				barEl.value = settings.bar ?? "none";
 				barColorEl.value = settings.bar_color ?? "#22c55e";
 
 				function refreshVisibility() {
 					color2Row.style.display = gradientEl.checked ? "" : "none";
 					balanceRow.style.display = gradientEl.checked ? "" : "none";
+					softnessRow.style.display = gradientEl.checked ? "" : "none";
 					barRow.style.display = showBar ? "" : "none";
 					barColorRow.style.display = showBar && barEl.value !== "none" ? "" : "none";
 				}
@@ -57,6 +61,7 @@
 						if (s.color2 !== undefined) color2El.value = s.color2;
 						if (s.gradient !== undefined) gradientEl.checked = s.gradient;
 						if (s.balance !== undefined) balanceEl.value = s.balance;
+						if (s.softness !== undefined) softnessEl.value = s.softness;
 						if (s.bar !== undefined) barEl.value = s.bar;
 						if (s.bar_color !== undefined) barColorEl.value = s.bar_color;
 						refreshVisibility();
@@ -73,6 +78,7 @@
 							color2: color2El.value,
 							gradient: gradientEl.checked,
 							balance: parseInt(balanceEl.value, 10) || 50,
+							softness: parseInt(softnessEl.value, 10) || 50,
 							bar: showBar ? barEl.value : "none",
 							bar_color: barColorEl.value,
 						},
@@ -143,6 +149,10 @@
 		<div class="row" id="balance-row">
 			<label for="balance">Balance</label>
 			<input id="balance" type="range" min="0" max="100" step="1" oninput="update();" style="flex:1;" />
+		</div>
+		<div class="row" id="softness-row">
+			<label for="softness">Softness</label>
+			<input id="softness" type="range" min="0" max="100" step="1" oninput="update();" style="flex:1;" />
 		</div>
 		<div class="row" id="bar-row">
 			<label for="bar">Bar style</label>
