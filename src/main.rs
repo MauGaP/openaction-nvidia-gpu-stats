@@ -12,6 +12,7 @@ struct BgSettings {
 	color1: String,
 	color2: String,
 	gradient: bool,
+	balance: u8,
 	bar: String,
 	bar_color: String,
 }
@@ -22,6 +23,7 @@ impl Default for BgSettings {
 			color1: "#1e1e1e".to_string(),
 			color2: "#444444".to_string(),
 			gradient: false,
+			balance: 50,
 			bar: "none".to_string(),
 			bar_color: "#22c55e".to_string(),
 		}
@@ -67,10 +69,13 @@ fn render_overlay(pct: f32, style: &str, bar_color: &str) -> String {
 
 fn render_image_data_url(s: &BgSettings, pct: Option<f32>) -> String {
 	let (defs, bg_fill) = if s.gradient {
+		let b = (s.balance.min(100) as f32) / 100.0;
+		let stop1 = b * 50.0;
+		let stop2 = b * 50.0 + 50.0;
 		(
 			format!(
-				r##"<defs><radialGradient id="g" cx="50%" cy="50%" r="70%"><stop offset="0%" stop-color="{}"/><stop offset="100%" stop-color="{}"/></radialGradient></defs>"##,
-				s.color1, s.color2
+				r##"<defs><radialGradient id="g" cx="50%" cy="50%" r="70%"><stop offset="{:.1}%" stop-color="{}"/><stop offset="{:.1}%" stop-color="{}"/></radialGradient></defs>"##,
+				stop1, s.color1, stop2, s.color2
 			),
 			"url(#g)".to_string(),
 		)
