@@ -64,10 +64,15 @@ fn render_overlay(pct: f32, style: &str, bar_color: &str) -> String {
 	let pct = pct.clamp(0.0, 1.0);
 	match style {
 		"bar_bottom" => {
-			let filled = 144.0 * pct;
+			let margin = 10.0;
+			let bar_h = 14.0;
+			let y = 144.0 - margin - bar_h;
+			let inner_x = margin;
+			let inner_w = 144.0 - margin * 2.0;
+			let filled = inner_w * pct;
 			format!(
-				r##"<rect x="0" y="130" width="144" height="14" fill="rgba(0,0,0,0.35)"/><rect x="0" y="130" width="{:.1}" height="14" fill="{}"/>"##,
-				filled, bar_color
+				r##"<rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="3" fill="rgba(0,0,0,0.35)"/><rect x="{:.1}" y="{:.1}" width="{:.1}" height="{:.1}" rx="3" fill="{}"/>"##,
+				inner_x, y, inner_w, bar_h, inner_x, y, filled, bar_h, bar_color
 			)
 		}
 		"arc" => {

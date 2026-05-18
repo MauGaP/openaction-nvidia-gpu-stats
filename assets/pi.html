@@ -130,6 +130,13 @@
 				border-radius: 6px;
 				cursor: pointer;
 			}
+			input[type="number"] {
+				width: 64px;
+				padding: 4px 6px;
+				background-color: oklch(37.1% 0 0);
+				border: 1px solid oklch(43.9% 0 0);
+				border-radius: 6px;
+			}
 		</style>
 	</head>
 
@@ -148,11 +155,11 @@
 		</div>
 		<div class="row" id="balance-row">
 			<label for="balance">Balance</label>
-			<input id="balance" type="range" min="0" max="100" step="1" oninput="update();" style="flex:1;" />
+			<input id="balance" type="number" min="0" max="100" step="1" oninput="update();" />
 		</div>
 		<div class="row" id="softness-row">
 			<label for="softness">Softness</label>
-			<input id="softness" type="range" min="0" max="100" step="1" oninput="update();" style="flex:1;" />
+			<input id="softness" type="number" min="0" max="100" step="1" oninput="update();" />
 		</div>
 		<div class="row" id="bar-row">
 			<label for="bar">Bar style</label>
