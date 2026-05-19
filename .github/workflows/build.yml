@@ -41,14 +41,14 @@ jobs:
         shell: bash
         run: |
           mkdir -p staged
-          cp "target/${{ matrix.target }}/release/oagpustats" "staged/oagpustats-${{ matrix.target }}"
-          chmod +x "staged/oagpustats-${{ matrix.target }}"
+          cp "target/${{ matrix.target }}/release/oanvgpustats" "staged/oanvgpustats-${{ matrix.target }}"
+          chmod +x "staged/oanvgpustats-${{ matrix.target }}"
 
       - name: Upload binary artifact
         uses: actions/upload-artifact@v4
         with:
           name: bin-${{ matrix.target }}
-          path: staged/oagpustats-${{ matrix.target }}
+          path: staged/oanvgpustats-${{ matrix.target }}
           compression-level: 0
 
   package:
@@ -69,22 +69,22 @@ jobs:
       - name: Assemble plugin directory
         run: |
           set -euo pipefail
-          PLUGIN_DIR="dev.maugap.oagpustats.sdPlugin"
+          PLUGIN_DIR="dev.maugap.oanvgpustats.sdPlugin"
           mkdir -p "$PLUGIN_DIR"
           cp assets/manifest.json "$PLUGIN_DIR/"
           cp assets/icon.png "$PLUGIN_DIR/"
           cp assets/pi.html "$PLUGIN_DIR/"
           for arch in x86_64-unknown-linux-gnu aarch64-unknown-linux-gnu; do
-            install -m 755 "bins/bin-$arch/oagpustats-$arch" "$PLUGIN_DIR/oagpustats-$arch"
+            install -m 755 "bins/bin-$arch/oanvgpustats-$arch" "$PLUGIN_DIR/oanvgpustats-$arch"
           done
-          zip -r dev.maugap.oagpustats.zip "$PLUGIN_DIR"
-          ls -la dev.maugap.oagpustats.zip
-          unzip -l dev.maugap.oagpustats.zip
+          zip -r dev.maugap.oanvgpustats.zip "$PLUGIN_DIR"
+          ls -la dev.maugap.oanvgpustats.zip
+          unzip -l dev.maugap.oanvgpustats.zip
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
-          files: dev.maugap.oagpustats.zip
+          files: dev.maugap.oanvgpustats.zip
           generate_release_notes: true
           draft: false
           prerelease: false

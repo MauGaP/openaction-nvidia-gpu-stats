@@ -1,6 +1,6 @@
 [package]
-name = "oagpustats"
-version = "0.1.2"
+name = "oanvgpustats"
+version = "0.2.0"
 edition = "2024"
 
 [dependencies]

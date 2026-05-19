@@ -178,10 +178,10 @@ macro_rules! gpu_action {
 	};
 }
 
-gpu_action!(UsageAction, "dev.maugap.oagpustats.usage");
-gpu_action!(TemperatureAction, "dev.maugap.oagpustats.temperature");
-gpu_action!(MemoryAction, "dev.maugap.oagpustats.memory");
-gpu_action!(PowerAction, "dev.maugap.oagpustats.power");
+gpu_action!(UsageAction, "dev.maugap.oanvgpustats.usage");
+gpu_action!(TemperatureAction, "dev.maugap.oanvgpustats.temperature");
+gpu_action!(MemoryAction, "dev.maugap.oanvgpustats.memory");
+gpu_action!(PowerAction, "dev.maugap.oanvgpustats.power");
 
 struct GpuSnapshot {
 	usage_pct: Option<f32>,

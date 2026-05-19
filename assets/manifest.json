@@ -1,19 +1,19 @@
 {
-	"Name": "GPU Stats",
+	"Name": "NVIDIA GPU Stats",
 	"Author": "maugap",
-	"Version": "0.1.2",
-	"Category": "GPU Stats",
+	"Version": "0.2.0",
+	"Category": "NVIDIA GPU Stats",
 	"Icon": "icon",
 	"OS": [{ "Platform": "linux" }],
 	"CodePaths": {
-		"x86_64-unknown-linux-gnu": "oagpustats-x86_64-unknown-linux-gnu",
-		"aarch64-unknown-linux-gnu": "oagpustats-aarch64-unknown-linux-gnu"
+		"x86_64-unknown-linux-gnu": "oanvgpustats-x86_64-unknown-linux-gnu",
+		"aarch64-unknown-linux-gnu": "oanvgpustats-aarch64-unknown-linux-gnu"
 	},
-	"CodePathLin": "oagpustats-x86_64-unknown-linux-gnu",
+	"CodePathLin": "oanvgpustats-x86_64-unknown-linux-gnu",
 	"PropertyInspectorPath": "pi.html",
 	"Actions": [
 		{
-			"UUID": "dev.maugap.oagpustats.usage",
+			"UUID": "dev.maugap.oanvgpustats.usage",
 			"Name": "GPU Usage",
 			"Icon": "icon",
 			"Tooltip": "Displays GPU utilisation (NVIDIA via nvidia-smi)",
@@ -21,7 +21,7 @@
 			"States": [{ "Title": "0%", "FontSize": 16 }]
 		},
 		{
-			"UUID": "dev.maugap.oagpustats.temperature",
+			"UUID": "dev.maugap.oanvgpustats.temperature",
 			"Name": "GPU Temperature",
 			"Icon": "icon",
 			"Tooltip": "Displays GPU temperature (NVIDIA via nvidia-smi)",
@@ -29,7 +29,7 @@
 			"States": [{ "Title": "--°C", "FontSize": 18 }]
 		},
 		{
-			"UUID": "dev.maugap.oagpustats.memory",
+			"UUID": "dev.maugap.oanvgpustats.memory",
 			"Name": "GPU Memory",
 			"Icon": "icon",
 			"Tooltip": "Displays GPU memory used / total (NVIDIA via nvidia-smi)",
@@ -37,7 +37,7 @@
 			"States": [{ "Title": "0GB", "FontSize": 12 }]
 		},
 		{
-			"UUID": "dev.maugap.oagpustats.power",
+			"UUID": "dev.maugap.oanvgpustats.power",
 			"Name": "GPU Power",
 			"Icon": "icon",
 			"Tooltip": "Displays GPU power draw in watts (NVIDIA via nvidia-smi)",
