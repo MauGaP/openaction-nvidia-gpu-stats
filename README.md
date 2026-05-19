@@ -1,4 +1,15 @@
-## OpenAction NVIDIA GPU Stats plugin
+## OpenAction NVIDIA GPU Stats plugin — DEPRECATED
+
+> ⚠️ **This plugin is deprecated and the repository is archived.**
+>
+> Its functionality has been folded into [**MauGaP/opendeck-graphs**](https://github.com/MauGaP/opendeck-graphs),
+> a fork of [`mdvictor/opendeck-graphs`](https://github.com/mdvictor/opendeck-graphs) that covers GPU usage,
+> temperature, memory and power (plus CPU, RAM, disk, network and more) with configurable backgrounds,
+> gradients, colors, sizes and gauge geometry.
+>
+> Please use that plugin instead.
+
+---
 
 An OpenAction ([OpenDeck](https://github.com/nekename/OpenDeck) / [Tacto](https://tacto.rivul.us)) plugin for displaying NVIDIA GPU stats on Linux.
 
